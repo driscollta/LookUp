@@ -1,0 +1,112 @@
+<resources>
+    <string name="app_name">Up in the Sky</string>
+    <string name="app_name_plus">Up in the Sky+</string>
+    <string name="ok">OK</string>
+    <string name="more_info">More Info</string>
+    <string name="http_">http://</string>
+    <string name="https_">https://</string>
+    <string name="no_browser">No browser installed</string>
+    <string name="google_app_id">lookup-1240</string>
+    <string name="livemode_hint">Hint: pinch to zoom; click on satellites</string>
+    <string name="pausedmode_hint">Hint: pinch to zoom, swipe to pan; click on satellites</string>
+    <string name="open_location_settings">Location settings disabled</string>
+    <string name="open_wifi_settings">Satellite orbits outdated, open data connection.</string>
+    <string name="ask_mobile_data_permission">"Update satellite orbits via Mobile data? Data size is "</string>
+    <string name="open_wifi_location_settings">Location outdated, enable WiFi network</string>
+    <string name="share_file">Share to:</string>
+    <string name="share">Share</string>
+    <string name="settings">Settings</string>
+    <string name="title_activity_settings">Settings</string>
+    <!-- Strings related to Settings -->
+    <!-- Example General settings -->
+
+    <!-- Example settings for Data & Sync -->
+
+    <!-- Example settings for Notifications -->
+
+    <string name="satellite_filter_settings">Satellite Categories</string>
+    <string name="mobile_data_options_settings">Mobile Data</string>
+    <string name="mobile_data_options_dialog_title">Internet Connection Options</string>
+    <string name="mobile_data_options_default">0</string>
+    <string name="magnetic_declination_options_settings">Magnetic Declination</string>
+    <string name="magnetic_declination_options_dialog_title">Select Direction Option</string>
+    <string name="magnetic_declination_options_default">0</string>
+    <string name="satellite_category_settings">Choose categories to show</string>
+    <string name="about">About</string>
+    <string name="show_all">Show All</string>
+    <string name="upgrade_snackbar_ad">Get a lot more satellites for just 99 cents!</string>
+    <string name="about_lookup">Look, Up in the Sky - more</string>
+    <string name="about_section1">What\'s this app all about?</string>
+
+    <string name="copy_right">
+		\nCopyright © 2016 cyclebikeapp. All Rights
+		Reserved.\n
+	</string>
+    <string name="links_header">Resources</string>
+    <string name="body_links">Links to more satellite information:</string>
+    <string name="link1_link">http://www.amsat.org/</string>
+    <string name="link1_header">Amateur Radio in Space</string>
+    <string name="link2_link">http://space.skyrocket.de/index.html</string>
+    <string name="link2_header">Gunter\'s Space Page</string>
+    <string name="link3_link">https://en.wikipedia.org/wiki/Communications_satellite</string>
+    <string name="link3_header">Wikipedia</string>
+    <string name="link4_link">http://nssdc.gsfc.nasa.gov/nmc/SpacecraftQuery.jsp</string>
+    <string name="link4_header">NASA Space Science Data Coordinated Archive</string>
+    <string name="link5_link">http://www.planet4589.org/space/jsr/jsr.html</string>
+    <string name="link5_header">Jonathan\'s Space Page</string>
+    <string name="hints_header">How to use this app</string>
+    <string name="hints_text_free1">Pinch to zoom, swipe to pan (when paused), click on satellites for information.</string>
+    <string name="hints_text_free2">Use menu to share satellite image, select satellites to view, set options.</string>
+    <string name="sat_color_header_text">Satellite color\n\t\tyellow = geosynchronous\n\t\tred = elliptical\n\t\tgreen = low-earth orbit</string>
+    <string name="upgrade_button_text">upgrade</string>
+    <string name="free_app_about_text">This free version shows some of the invisible satellites Up in the Sky. For just 99 cents you can learn about many, many more.</string>
+    <string name="celestrack_link">http://www.celestrak.com/</string>
+    <string name="celestrack_header">CelesTrak, satellite information</string>
+    <string name="sat_calc_link">https://github.com/badgersoftdotcom/predict4java</string>
+    <string name="sat_calc_header">Link to predict4java satellite orbit calculations</string>
+    <string name="acknowledgement_header">Acknowledgements</string>
+    <string name="paid_version_about_app_text">Learn about all the satellites orbiting Up in the Sky.</string>
+    <string name="ask_mobile_internet_permission">Allow internet access using Mobile data?</string>
+    <string name="show_inactive_cb_text">Show Inactive Satellites</string>
+    <string name="show_all_button_text">Show All</string>
+    <string name="clear_list_button_text">Clear List</string>
+    <string name="link6_link">https://directory.eoportal.org/web/eoportal/satellite-missions</string>
+    <string name="link6_header">eoPortal Directory</string>
+    <string name="no_satellites_visible">No satellites visible</string>
+    <string name="location_unknown">Location Unknown</string>
+    <string name="location_not_current">Location not current</string>
+    <string name="ab_title_settings">Settings</string>
+    <string name="complain_write_permission">Cannot record sharing image</string>
+    <string name="no_compass_title">No compass</string>
+    <string name="no_compass_message">Your device has no compass. Azimuth grid is frozen at 180 deg south. You can still pan the satellite constellation in \"research-mode\" by swiping the display.</string>
+    <string name="allow_camera">Camera is used for background image. Give permission?</string>
+    <string name="allow">Allow</string>
+    <string name="cancel">Cancel</string>
+    <string name="request_storage_permission_dialog_message">Can\'t save sharing image. Allow file storage permission.</string>
+    <string name="request_storage_permission_dialog_title">Write File Permission</string>
+    <string name="ask_location_permission">Location needed for satellite orbits.</string>
+    <string name="open">Open</string>
+    <string name="enable">Enable</string>
+
+    <string name="upgrade_string">Upgrade to plus version</string>
+    <string name="loading_satellites">Loading satellites</string>
+    <string name="search_hint">Search satellite name</string>
+    <string name="title_activity_searchable">Search results</string>
+
+
+    <!-- The label for use as a searchable item -->
+    <string name="search_label">Database</string>
+
+    <!-- The menu entry that invokes search. -->
+    <string name="menu_search">Search</string>
+
+    <!-- The description that will show up in the search settings for this source.  -->
+    <string name="settings_description">Satellite search</string>
+
+    <!-- General instructions in the main activity. -->
+    <string name="search_results">Search results</string>
+
+    <!-- Search failure message. -->
+    <string name="no_results">No Satellites found matching query \n' \"%1$s\"'</string>
+
+</resources>

@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="4dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:layout_marginLeft="2dp"
+            android:layout_marginTop="6dp"
+            android:text="@string/about_section1"
+            android:textAppearance="@style/header_style"/>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/upgrade_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:layout_gravity="end"
+                android:layout_marginRight="10dp"
+                android:layout_marginEnd="10dp"
+                android:text="@string/upgrade_button_text"/>
+
+            <TextView
+                android:id="@+id/free_version_ad_to_upgrade"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="false"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:text="@string/free_app_about_text"
+                android:textAppearance="@style/body_text"
+                android:layout_toStartOf="@id/upgrade_button"
+                android:layout_toLeftOf="@id/upgrade_button"/>
+        </RelativeLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hints_header"
+            android:textAppearance="@style/header_style"/>
+
+        <TextView
+            android:id="@+id/hint_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/hints_text_free1"
+            android:textAppearance="@style/body_text"
+            />
+
+        <TextView
+            android:id="@+id/hint_text2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/body_text"
+            android:text="@string/hints_text_free2"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:id="@+id/sat_color_header"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/body_text"
+            android:text="@string/sat_color_header_text"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/links_header"
+            android:textAppearance="@style/header_style"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/body_links"
+            android:textAppearance="@style/body_text"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/link1_header"
+            android:textAppearance="@style/body_text"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:id="@+id/link1_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="@string/link1_link"
+            android:textAppearance="@style/link_text"
+            android:clickable="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/link2_header"
+            android:textAppearance="@style/body_text"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:id="@+id/link2_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="@string/link2_link"
+            android:textAppearance="@style/link_text"
+            android:clickable="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/link3_header"
+            android:textAppearance="@style/body_text"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:id="@+id/link3_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="@string/link3_link"
+            android:textAppearance="@style/link_text"
+            android:clickable="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/link4_header"
+            android:textAppearance="@style/body_text"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:id="@+id/link4_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="@string/link4_link"
+            android:textAppearance="@style/link_text"
+            android:clickable="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/link5_header"
+            android:textAppearance="@style/body_text"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:id="@+id/link5_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="@string/link5_link"
+            android:textAppearance="@style/link_text"
+            android:clickable="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/link6_header"
+            android:textAppearance="@style/body_text"
+            android:layout_marginTop="5dp"/>
+        <TextView
+            android:id="@+id/link6_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="@string/link6_link"
+            android:textAppearance="@style/link_text"
+            android:clickable="true"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/acknowledgement_header"
+            android:textAppearance="@style/header_style"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sat_calc_header"
+            android:textAppearance="@style/body_text"/>
+
+        <TextView
+            android:id="@+id/sat_calc_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="@string/sat_calc_link"
+            android:textAppearance="@style/link_text"
+            android:clickable="true"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/celestrack_header"
+            android:textAppearance="@style/body_text"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:id="@+id/celestrack_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="@string/celestrack_link"
+            android:textAppearance="@style/link_text"
+            android:clickable="true"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="4dp"
+            android:layout_marginLeft="2dp"
+            android:text="@string/copy_right"
+            android:textAppearance="@style/copyright_text"/>
+
+    </LinearLayout>
+
+</ScrollView>

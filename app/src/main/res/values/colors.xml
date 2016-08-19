@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#90d0e8</color>
+    <color name="colorOrange">#ee6d00</color>
+    <color name="colorDisabledText">#ABB2AE</color>
+    <color name="colorDefaultAccent">#009688</color>
+    <color name="colorSatRed">#ee0000</color>
+    <color name="colorSatYellow">#fbfd00</color>
+    <color name="colorSatGreen">#15ff00</color>
+</resources>

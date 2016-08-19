@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+<ListPreference
+    android:key="mobile_data_setting_key"
+    android:title="@string/mobile_data_options_settings"
+    android:dialogTitle="@string/mobile_data_options_dialog_title"
+    android:entries="@array/mobile_data_options_entries"
+    android:entryValues="@array/mobile_data_options_values"
+    android:defaultValue="@string/mobile_data_options_default"
+    />
+    <CheckBoxPreference
+        android:key="show_inactive_sats_key"
+        android:title="@string/show_inactive_cb_text"
+        android:defaultValue="true"
+        />
+
+</PreferenceScreen>

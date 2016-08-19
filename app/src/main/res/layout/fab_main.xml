@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context="com.cyclebikeapp.upinthesky.NavDrawerFabActivity"
+    >
+
+    <include layout="@layout/navdrawer_fab_content"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab_play"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="@dimen/fab_margin"
+        android:src="@drawable/ic_fab_play_cropped"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab_toggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="@dimen/fab_margin"
+        android:src="@drawable/ic_fab_menu_cropped"/>
+
+</android.support.design.widget.CoordinatorLayout>

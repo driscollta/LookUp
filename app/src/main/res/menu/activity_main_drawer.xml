@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:support="http://schemas.android.com/apk/res-auto">
+    <group android:checkableBehavior="single">
+
+        <item
+            android:id="@+id/nav_upgrade"
+            android:icon="@drawable/ic_menu_add"
+            android:title="@string/upgrade_string"/>
+
+    </group>
+    <group android:checkableBehavior="single">
+
+        <item
+            android:id="@+id/nav_satellite_filter"
+            android:icon="@drawable/ic_menu_view"
+            android:title="@string/satellite_filter_settings"/>
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_menu_preferences"
+            android:title="@string/settings"/>
+        <item
+            android:id="@+id/nav_search"
+            android:icon="@drawable/ic_menu_search"
+            android:title="@string/menu_search"/>
+
+    </group>
+
+    <item android:title="Communicate">
+        <menu>
+            <item
+                android:id="@+id/nav_share"
+                android:icon="@drawable/ic_menu_share"
+                android:title="@string/share"
+                support:showAsAction="always"/>
+            <item
+                android:id="@+id/nav_help"
+                android:icon="@drawable/ic_menu_info_details"
+                android:title="@string/about"
+                support:showAsAction="always"/>
+        </menu>
+    </item>
+
+</menu>

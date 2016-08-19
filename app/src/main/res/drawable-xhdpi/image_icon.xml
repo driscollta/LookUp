@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<level-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+	<item android:drawable="@drawable/btn_check_on_holo_light" android:maxLevel="10" />
+	<item android:drawable="@drawable/btn_check_off_holo_light" android:maxLevel="11" />
+	<item android:drawable="@drawable/btn_check_off_disabled_holo_light" android:maxLevel="12" />
+</level-list>
