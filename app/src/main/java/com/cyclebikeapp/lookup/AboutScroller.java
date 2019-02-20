@@ -1,4 +1,4 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -7,12 +7,15 @@ import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import static com.cyclebikeapp.upinthesky.Constants.PAID_VERSION;
+
+import static android.view.View.GONE;
+import static android.view.View.VISIBLE;
+import static com.cyclebikeapp.lookup.Constants.PAID_VERSION;
+import static com.cyclebikeapp.lookup.MainActivity.version;
 /*
  * Copyright  2013 cyclebikeapp. All Rights Reserved.
 */
@@ -22,16 +25,16 @@ import static com.cyclebikeapp.upinthesky.Constants.PAID_VERSION;
  * are defined in a series of strings. The only other thing is to change the custom title
  */
 
+@SuppressWarnings("ConstantConditions")
 public class AboutScroller extends AppCompatActivity {
-    TextView link1;
-    TextView link2;
-    TextView link3;
-    TextView link4;
-    TextView link5;
-    TextView link6;
-    TextView predict4java_link;
-    TextView celestrak_link;
-    Button upgradeButton;
+    private TextView link1;
+    private TextView link2;
+    private TextView link3;
+    private TextView link4;
+    private TextView link5;
+    private TextView link6;
+    private TextView predict4java_link;
+    private TextView celestrak_link;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -41,20 +44,18 @@ public class AboutScroller extends AppCompatActivity {
         getWidgetIDs();
     }
     private void getWidgetIDs() {
-        upgradeButton = (Button) findViewById(R.id.upgrade_button);
-        int upgrade_visibility = View.VISIBLE;
-        if (MainActivity.version == PAID_VERSION) {
-            upgrade_visibility = View.GONE;
-            TextView aboutAppText = (TextView) findViewById(R.id.free_version_ad_to_upgrade);
+        Button upgradeButton = findViewById(R.id.upgrade_button);
+        if (version == PAID_VERSION) {
+
+            TextView aboutAppText = findViewById(R.id.free_version_ad_to_upgrade);
             assert aboutAppText != null;
             aboutAppText.setText(R.string.paid_version_about_app_text);
         } else{
             // in Free version, set sat color text hidden
-            TextView satColorText = (TextView) findViewById(R.id.sat_color_header);
-            satColorText.setVisibility(View.GONE);
+            findViewById(R.id.sat_color_layout).setVisibility(version == PAID_VERSION?GONE:VISIBLE);
         }
         assert upgradeButton != null;
-        upgradeButton.setVisibility(upgrade_visibility);
+        upgradeButton.setVisibility(version == PAID_VERSION?GONE:VISIBLE);
         upgradeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -72,7 +73,7 @@ public class AboutScroller extends AppCompatActivity {
                 }
             }
         });
-        celestrak_link = (TextView) findViewById(R.id.celestrack_link);
+        celestrak_link = findViewById(R.id.celestrack_link);
         celestrak_link.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -86,7 +87,7 @@ public class AboutScroller extends AppCompatActivity {
                 }
             }
         });
-        predict4java_link = (TextView) findViewById(R.id.sat_calc_link);
+        predict4java_link = findViewById(R.id.sat_calc_link);
         predict4java_link.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -100,7 +101,7 @@ public class AboutScroller extends AppCompatActivity {
                 }
             }
         });
-        link1 = (TextView) findViewById(R.id.link1_link);
+        link1 = findViewById(R.id.link1_link);
         link1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -114,7 +115,7 @@ public class AboutScroller extends AppCompatActivity {
                 }
             }
         });
-        link2 = (TextView) findViewById(R.id.link2_link);
+        link2 = findViewById(R.id.link2_link);
         link2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -128,7 +129,7 @@ public class AboutScroller extends AppCompatActivity {
                 }
             }
         });
-        link3 = (TextView) findViewById(R.id.link3_link);
+        link3 = findViewById(R.id.link3_link);
         link3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -142,7 +143,7 @@ public class AboutScroller extends AppCompatActivity {
                 }
             }
         });
-        link4 = (TextView) findViewById(R.id.link4_link);
+        link4 = findViewById(R.id.link4_link);
         link4.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -156,7 +157,7 @@ public class AboutScroller extends AppCompatActivity {
                 }
             }
         });
-        link5 = (TextView) findViewById(R.id.link5_link);
+        link5 = findViewById(R.id.link5_link);
         link5.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -170,7 +171,7 @@ public class AboutScroller extends AppCompatActivity {
                 }
             }
         });
-        link6 = (TextView) findViewById(R.id.link6_link);
+        link6 = findViewById(R.id.link6_link);
         link6.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -185,11 +186,6 @@ public class AboutScroller extends AppCompatActivity {
             }
         });
 
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        return super.onCreateOptionsMenu(menu);
     }
 
     /**
