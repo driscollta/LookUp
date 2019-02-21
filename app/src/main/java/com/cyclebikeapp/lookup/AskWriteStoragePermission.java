@@ -1,4 +1,4 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.Manifest;
 import android.app.AlertDialog;
@@ -16,7 +16,7 @@ public class AskWriteStoragePermission extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         if (MainActivity.DEBUG){
-            Log.w(this.getClass().getName(), "asking for location permission in new Activity");}
+            Log.w(this.getClass().getName(), "asking for storage permission in new Activity");}
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_location_permission);
         AlertDialog.Builder builder = new AlertDialog.Builder(this);

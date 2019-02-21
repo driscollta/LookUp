@@ -1,4 +1,4 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.annotation.TargetApi;
 import android.content.Context;

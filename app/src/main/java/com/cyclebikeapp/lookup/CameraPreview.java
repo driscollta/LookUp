@@ -1,4 +1,4 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.Manifest;
 import android.content.Context;
@@ -28,13 +28,13 @@ import java.util.List;
 class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
     private static final int DEF_FOV = 60;
     private static final int JPEG_QUALITY = 60;
-    static float desiredExposureCompensationValue = -1.5f;
-    SurfaceHolder mHolder;
+    private static float desiredExposureCompensationValue = -1.5f;
+    private SurfaceHolder mHolder;
     Camera mCamera;
     // a list of available zoom ratios for this camera
     public List<Integer> zoomRatios;
     private boolean hasCamera;
-    YuvImage previewImage;
+    private YuvImage previewImage;
 
     CameraPreview(Context context) {
         super(context);
@@ -140,7 +140,7 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     /** A safe way to get an instance of the Camera object. */
-    public Camera getCameraInstance(){
+    private Camera getCameraInstance(){
         Camera c = null;
         int cameraId = findBackFacingCamera();
         int cameraPermissionCheck = ContextCompat.checkSelfPermission(getContext(),
@@ -201,7 +201,7 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
             mCamera.setDisplayOrientation(displayOrientation);
         }
     }
-    public void logCameraParameters(){
+    private void logCameraParameters(){
         Camera.Parameters p = mCamera.getParameters();
 //        Log.i(this.getClass().getName(), "ExposureCompensation: " + p.getExposureCompensation());
 //        Log.i(this.getClass().getName(), "ExposureCompensationStep: " + p.getExposureCompensationStep());
@@ -276,7 +276,7 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
         }
     }
 
-    public void saveSharingImage(GridSatView mGridSatView, YuvImage previewImage) {
+    private void saveSharingImage(GridSatView mGridSatView, YuvImage previewImage) {
         if (MainActivity.DEBUG) {Log.i(this.getClass().getName(), "saveSharingImage() ");}
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         previewImage.compressToJpeg(new Rect(0, 0, previewImage.getWidth(), previewImage.getHeight()), JPEG_QUALITY, out);

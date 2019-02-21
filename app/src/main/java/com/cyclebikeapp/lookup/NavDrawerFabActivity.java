@@ -1,15 +1,15 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.FileProvider;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -20,24 +20,26 @@ import android.view.View;
 
 import java.io.File;
 
-import static com.cyclebikeapp.upinthesky.Constants.LOOK_UP;
-import static com.cyclebikeapp.upinthesky.Constants.NAV_DRAWER_LIVE_MODE_KEY;
-import static com.cyclebikeapp.upinthesky.Constants.PAID_VERSION;
+import static android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION;
+import static com.cyclebikeapp.lookup.Constants.LOOK_UP;
+import static com.cyclebikeapp.lookup.Constants.NAV_DRAWER_LIVE_MODE_KEY;
+import static com.cyclebikeapp.lookup.Constants.PAID_VERSION;
+import static com.cyclebikeapp.lookup.Constants.SHARING_IMAGE_NAME;
+import static com.cyclebikeapp.lookup.Util.getAlbumStorageDir;
 
 
 /**
  * Created by TommyD on 3/16/2016.
  *
  */
+@SuppressWarnings("ConstantConditions")
 public class NavDrawerFabActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener{
     private static final int REQUEST_CODE_SETTINGS = 902;
     private static final int REQUEST_CODE_SEARCH = 903;
     private static final int PERMISSIONS_REQUEST_STORAGE = 22;
     private NavigationView navigationView;
-    private Intent fileShare;
     private DrawerLayout mDrawerLayout;
-    private static final String SHARING_IMAGE_NAME = "LookUpInTheSky.jpg";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,17 +82,17 @@ public class NavDrawerFabActivity extends AppCompatActivity
                 finish();
             }
         });
+
     }
     @Override
     protected void onPause() {
-        if (MainActivity.DEBUG){Log.w(this.getClass().getName(), "NavDrawerActivity onStop()");}
         super.onPause();
         Intent i = getIntent();
         i.putExtra(NAV_DRAWER_LIVE_MODE_KEY, false);
         setResult(RESULT_OK, i);
     }
 
-    public boolean hideUpgradeItem(){
+    private boolean hideUpgradeItem(){
         Menu menu = navigationView.getMenu();
         MenuItem item = menu.findItem(R.id.nav_upgrade);
         item.setVisible(false);
@@ -117,6 +119,7 @@ public class NavDrawerFabActivity extends AppCompatActivity
                 }
                 break;
             case REQUEST_CODE_SEARCH:
+                if (MainActivity.DEBUG) {Log.i(this.getClass().getName(), "onActivityResult() - returned from Search");}
                 if (resultCode == RESULT_OK) {
                     if (MainActivity.DEBUG) {Log.i(this.getClass().getName(), "onActivityResult() - result ok ");}
                     DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -191,7 +194,7 @@ public class NavDrawerFabActivity extends AppCompatActivity
     @Override
     public boolean onSearchRequested() {
         Bundle appData = new Bundle();
-        //todo close the navdrawer
+
         mDrawerLayout.setDrawerListener(new DrawerLayout.SimpleDrawerListener() {
             @Override
             public void onDrawerClosed(View drawerView) {
@@ -221,17 +224,37 @@ public class NavDrawerFabActivity extends AppCompatActivity
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.hasStoragePermission(this)){
                 startActivity(new Intent(this, AskWriteStoragePermission.class));
             } else if (Util.isExternalStorageWritable(this)) {
-                File sharingFileDir = getAlbumStorageDir(LOOK_UP);
-                String type = "image/*";
-                createSharingIntent(type, new File(sharingFileDir, SHARING_IMAGE_NAME));
+                File sharingFileDir = getAlbumStorageDir(LOOK_UP, getApplicationContext());
+                // Create the new Intent using the 'Send' action.
+                Intent fileShare = new Intent(Intent.ACTION_SEND);
+                fileShare.setFlags(FLAG_GRANT_READ_URI_PERMISSION);
+                File sharingFile = new File(sharingFileDir.toString(), SHARING_IMAGE_NAME);
+                if (MainActivity.DEBUG) {Log.w(this.getClass().getName(), "sharing file: " + sharingFile.toString()
+                        + " length: " + sharingFile.length() + " can read: " + (sharingFile.canRead()?"yes":"no"));}
+                Uri fileUri = FileProvider.getUriForFile(
+                        getApplicationContext(),
+                        getApplicationContext().getPackageName() + ".provider", sharingFile);
+                fileShare.setDataAndType(fileUri, "image/jpeg");
                 // Broadcast the Intent.
-                if (MainActivity.DEBUG) {Log.i(this.getClass().getName(), "share() ");}
                 startActivity(Intent.createChooser(fileShare, getString(R.string.share_file)));
+                if (MainActivity.DEBUG){
+                    String[] fileList = sharingFileDir.list();
+                    StringBuilder files = new StringBuilder("");
+                    for (String s:fileList){
+                        files.append(s);
+                        files.append("\n");
+                    }
+                    Log.i(this.getClass().getName(), "sharing files in dir: " + files.toString());
+                    Log.i(this.getClass().getName(), "sharing file from Uri: " + fileShare.getData().getPath());
+                }
+
             }
         } else if (id == R.id.nav_satellite_filter) {
             startActivity(new Intent(this, SatelliteFilterSettings.class));
         } else if (id == R.id.nav_help) {
             startActivity(new Intent(this, AboutScroller.class));
+        } else if (id == R.id.search_help) {
+            startActivity(new Intent(this, SearchHelpScroller.class));
         } else if (id == R.id.nav_search){
             if (MainActivity.DEBUG) {Log.i(this.getClass().getName(), "search() ");}
             //todo could startActivity for search, where we'll do onSearchRequested during on Resume()
@@ -252,30 +275,26 @@ public class NavDrawerFabActivity extends AppCompatActivity
                 }
             }
         }
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        else if (id == R.id.nav_up2){
+
+            final String appPackageName = "com.cyclebikeapp.lookup.airplanes";
+            if (MainActivity.DEBUG) {Log.w(this.getClass().getName(), "packageName: " + appPackageName);}
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + appPackageName)));
+            } catch (android.content.ActivityNotFoundException anfe) {
+                Intent browseIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + appPackageName));
+                PackageManager packageManager = NavDrawerFabActivity.this.getPackageManager();
+                if (browseIntent.resolveActivity(packageManager) != null) {
+                    startActivity(browseIntent);
+                } else {
+                    Log.w(this.getClass().getName(), getString(R.string.no_browser));
+                }
+            }
+        }
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         assert drawer != null;
         //drawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
-    public File getAlbumStorageDir(String albumName) {
-        // Get the directory for the user's public pictures directory.
-        File file = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), albumName);
-        if (!file.mkdirs()) {
-            if (MainActivity.DEBUG) {Log.w(this.getClass().getName(), "directory not created");}
-        }
-        return file;
-    }
-    private void createSharingIntent(String type, File mediaPath){
-        // Create the new Intent using the 'Send' action.
-        fileShare = new Intent(Intent.ACTION_SEND);
-        // Set the MIME type
-        fileShare.setType(type);
-        // Create the URI from the media
-        Uri uri = Uri.fromFile(mediaPath);
-        // Add the URI to the Intent.
-        fileShare.putExtra(Intent.EXTRA_STREAM, uri);
-
-    }
 }

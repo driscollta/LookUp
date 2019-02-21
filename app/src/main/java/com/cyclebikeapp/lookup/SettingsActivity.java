@@ -1,4 +1,4 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.content.Context;
 import android.content.Intent;

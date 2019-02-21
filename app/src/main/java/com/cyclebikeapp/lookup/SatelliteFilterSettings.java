@@ -1,4 +1,4 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -18,15 +18,17 @@ import android.widget.ListView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import static com.cyclebikeapp.upinthesky.Constants.*;
+import static com.cyclebikeapp.lookup.Constants.*;
 import static android.preference.PreferenceManager.getDefaultSharedPreferences;
 
 
+@SuppressWarnings("ConstantConditions")
 public class SatelliteFilterSettings extends AppCompatActivity {
 
     private ListView satCategoryList;
     private Button showAll;
     private Button clearList;
+    //FREE version only has active GEO satellites, so the active / inactive switch makes no difference
     private CheckBox showInactiveSatsCB;
 
     private static final String BTN_CHECK_ON = "10";
@@ -35,7 +37,7 @@ public class SatelliteFilterSettings extends AppCompatActivity {
 
     private boolean[] satCategoryShow;
     private String[] satelliteCategoryList;
-    Snackbar adSnackbar;
+    private Snackbar adSnackbar;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -44,6 +46,10 @@ public class SatelliteFilterSettings extends AppCompatActivity {
         initializeSatelliteCategoryList();
         satCategoryShow = new boolean[satelliteCategoryList.length];
         getWidgetIDs();
+        SharedPreferences defaultSettings = getDefaultSharedPreferences(getApplicationContext());
+        // Set state of show inactive sat checkbox; too many satellites, set default to not show inactive
+        //FREE version only has active GEO satellites, so the active / inactive switch makes no difference
+        showInactiveSatsCB.setChecked(defaultSettings.getBoolean(SHOW_INACTIVE_SATS_KEY, false));
         adSnackbar = Snackbar.make(
                 satCategoryList,
                 getString(R.string.upgrade_snackbar_ad),
@@ -117,6 +123,8 @@ public class SatelliteFilterSettings extends AppCompatActivity {
         satelliteCategoryList = new String[]{"Television", "Radio", "Weather", "Military",
                 "Amateur Radio", "Communications", "Earth Observing", "Science", "Data", "GPS", "Space Station"};
     }
+    //{"Tv", "Radio", "Weather", "Military",
+    //"HAM", "Communications", "Earth Observing", "Science", "Data", "GPS", "Space Station"}
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -209,6 +217,7 @@ public class SatelliteFilterSettings extends AppCompatActivity {
         editor.apply();
         SharedPreferences defaultSettings = getDefaultSharedPreferences(getApplicationContext());
         SharedPreferences.Editor defaultEditor = defaultSettings.edit();
+        //FREE version only has active GEO satellites, so the active / inactive switch makes no difference
         defaultEditor.putBoolean(SHOW_INACTIVE_SATS_KEY, showInactiveSatsCB.isChecked()).apply();
     }
 

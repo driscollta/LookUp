@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -24,7 +24,6 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.os.Environment;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
@@ -37,13 +36,16 @@ import java.util.ArrayList;
 
 import satellite.Satellite;
 
-import static com.cyclebikeapp.upinthesky.Constants.PAID_VERSION;
+import static com.cyclebikeapp.lookup.Constants.PAID_VERSION;
+import static com.cyclebikeapp.lookup.Constants.SHARING_IMAGE_NAME;
+import static com.cyclebikeapp.lookup.Util.getAlbumStorageDir;
 
 
 /**
  * View that draws the camera preview overlay, keeps track of touch parameters, etc.
  *
  */
+@SuppressWarnings("ConstantConditions")
 public class GridSatView extends View {
 
     public static final int LOCATION_STATUS_UNKNOWN = 0;
@@ -52,14 +54,13 @@ public class GridSatView extends View {
     public static final int LOCATION_STATUS_OKAY = 3;
     private static final String DEG_SYMBOL = "\u00B0";
     public static final int ICON_SIZE = 48;
-    public static final int SATELLITE_TEXT_FONT_SIZE = 24;
+    private static final int SATELLITE_TEXT_FONT_SIZE = 24;
     private static final int DRAW_DATA_TEXT_SIZE = 24;
     private static final int DRAW_LOCATION_STATUS_TEXT_SIZE = 24;
     private static final int DRAW_SATELLITE_WARNING_TEXT_SIZE = 24;
     private static final int FAB_MARGIN = 16;
     private static final int FAB_DIAMETER = 56;
     private static final String LOOK_UP = "LookUp";
-    private static final String SHARING_IMAGE_NAME = "LookUpInTheSky.jpg";
     private static final int _360 = 360;
     private static final String TRUE_NORTH = "True North";
     private static final String FORMAT2_1 = "%2.1f";
@@ -88,9 +89,13 @@ public class GridSatView extends View {
     private final Drawable geoSatelliteDrawable;
     private final Drawable leoSatelliteDrawable;
     private final Drawable deepSatelliteDrawable;
+    private final Drawable cDeepSatelliteDrawable;
+    private final Drawable cGeoSatelliteDrawable;
     ArrayList<Satellite> mGEOSatellites;
     ArrayList<Satellite> mLEOSatellites;
     ArrayList<Satellite> mDeepSatellites;
+    ArrayList<Satellite> mCGEOSatellites;
+    ArrayList<Satellite> mCDeepSatellites;
     /**
      * Current height of the surface/canvas.
      *
@@ -125,11 +130,12 @@ public class GridSatView extends View {
     private double previewImageZoomScaleFactor;
     private boolean rotatePreviewImage = false;
     public boolean saveSharingImage;
-    File mySharingFile;
+    private File mySharingFile;
     public float magDeclination;
     private Snackbar mWriteSettingsSnackbar;
     public String debugText;
     public boolean loadingSatellites;
+    public boolean updatingTLEs;
 
     private static Bitmap ScaleBitmap(Bitmap source, float scale) {
         Matrix matrix = new Matrix();
@@ -149,11 +155,10 @@ public class GridSatView extends View {
         if (saveSharingImage) {
             // have to disable saving sharingImage right away because onDraw gets called again before File has finished writing
             saveSharingImage = false;
-            Log.i(this.getClass().getName(), "saveSharingImage");
             this.setDrawingCacheEnabled(true);
             Bitmap bitmap = Bitmap.createBitmap(this.getDrawingCache());
             this.setDrawingCacheEnabled(false);
-            //Log.i(this.getClass().getName(), "mySharingFile location:" + mySharingFile.toString());
+            if (MainActivity.DEBUG) Log.i(this.getClass().getName(), "mySharingFile location:" + mySharingFile.toString());
             if (Util.isExternalStorageWritable(this.getContext())) {
                 try {
                     FileOutputStream mFileOutStream = new FileOutputStream(mySharingFile);
@@ -185,13 +190,16 @@ public class GridSatView extends View {
     }
 
     private void drawNoSatelliteWarning(Canvas canvas) {
+        eraseBuildingSatMessage(canvas);
         if ((mGEOSatellites == null) || (mLEOSatellites == null) || (mDeepSatellites == null)) {return;}
+        if (loadingSatellites || updatingTLEs){
+            //instead show loading satellites message
+            drawSatelliteStatusMessage(canvas);
+            return;
+        }
         int numSatellites = mGEOSatellites.size() + mLEOSatellites.size() + mDeepSatellites.size();
         if (numSatellites > 0){
-            if (loadingSatellites){
-                //instead show loading satellites message
-                drawBuildingSatellitesMessage(canvas);
-            }
+            // if we have satellites, just return
             return;
         }
         String satWarningText = getResources().getString(R.string.no_satellites_visible);
@@ -207,8 +215,8 @@ public class GridSatView extends View {
         canvas.drawText(satWarningText, satWarningTextOffset, topOffset, textPaint);
     }
 
-    private void drawBuildingSatellitesMessage(Canvas canvas) {
-        String loadingSatText = getResources().getString(R.string.loading_satellites);
+    private void eraseBuildingSatMessage(Canvas canvas) {
+        String loadingSatText = "";
         Paint textPaint = new Paint();
         textPaint.setColor(orangeColor);
         textPaint.setTextSize(DRAW_SATELLITE_WARNING_TEXT_SIZE);
@@ -219,6 +227,23 @@ public class GridSatView extends View {
         }
         float loadingSatTextOffset = canvas.getWidth() / 2 - textPaint.measureText(loadingSatText)/ 2;
         canvas.drawText(loadingSatText, loadingSatTextOffset, topOffset, textPaint);
+    }
+
+    private void drawSatelliteStatusMessage(Canvas canvas) {
+        String satStatusText = getResources().getString(R.string.loading_satellites);
+        if (updatingTLEs){
+            satStatusText = getResources().getString(R.string.updating_tles);
+        }
+        Paint textPaint = new Paint();
+        textPaint.setColor(orangeColor);
+        textPaint.setTextSize(DRAW_SATELLITE_WARNING_TEXT_SIZE);
+        int top = fabMarginPixel;
+        float topOffset = top + lookTitleKomicaWideY.getMinimumHeight() + 20;
+        if (locationStatus != LOCATION_STATUS_OKAY){
+            topOffset += textPaint.getFontMetrics().bottom - textPaint.getFontMetrics().top;
+        }
+        float loadingSatTextOffset = canvas.getWidth() / 2 - textPaint.measureText(satStatusText)/ 2;
+        canvas.drawText(satStatusText, loadingSatTextOffset, topOffset, textPaint);
     }
 
     private void drawLocationStatus(Canvas canvas) {
@@ -616,6 +641,46 @@ public class GridSatView extends View {
                 }
             }
         }
+        if (mCDeepSatellites != null && MainActivity.version == PAID_VERSION) {
+            for (Satellite aSat : mCDeepSatellites) {
+                double deltaAz = (losAzDeg - aSat.getTLE().getLookAngleAz());
+                if (deltaAz > 180) {
+                    deltaAz -= _360;
+                } else if (deltaAz < -180) {
+                    deltaAz += _360;
+                }
+                int startX = (int) Math.round(cw_2 - deltaAz * pixPerDeg);
+                int startY = (int) Math.round(ch_2 + (losElDeg - aSat.getTLE().getLookAngleEl()) * pixPerDeg);
+                // test if point is in canvas via Rect.contains(startX, startY)
+                if (canvasRect.contains(startX, startY)) {
+                    cDeepSatelliteDrawable.setBounds(startX - halfIcon, startY - halfIcon, startX + halfIcon, startY + halfIcon);
+                    // convert angle to pixel left, top, right, bottom
+                    cDeepSatelliteDrawable.draw(canvas);
+                    // label with satellite name from satellite list
+                    labelSatellite(aSat.getTLE().getName(), canvas, startX - halfIcon, startY + halfIcon, satTextPaint);
+                }
+            }
+        }
+        if (mCGEOSatellites != null && MainActivity.version == PAID_VERSION) {
+            for (Satellite aSat : mCGEOSatellites) {
+                double deltaAz = (losAzDeg - aSat.getTLE().getLookAngleAz());
+                if (deltaAz > 180) {
+                    deltaAz -= _360;
+                } else if (deltaAz < -180) {
+                    deltaAz += _360;
+                }
+                int startX = (int) Math.round(cw_2 - deltaAz * pixPerDeg);
+                int startY = (int) Math.round(ch_2 + (losElDeg - aSat.getTLE().getLookAngleEl()) * pixPerDeg);
+                // test if point is in canvas via Rect.contains(startX, startY)
+                if (canvasRect.contains(startX, startY)) {
+                    cGeoSatelliteDrawable.setBounds(startX - halfIcon, startY - halfIcon, startX + halfIcon, startY + halfIcon);
+                    // convert angle to pixel left, top, right, bottom
+                    cGeoSatelliteDrawable.draw(canvas);
+                    // label with satellite name from satellite list
+                    labelSatellite(aSat.getTLE().getName(), canvas, startX - halfIcon, startY + halfIcon, satTextPaint);
+                }
+            }
+        }
     }
 
     private void labelSatellite(String satLabel, Canvas canvas, int startX, int startY, Paint textPaint) {
@@ -703,6 +768,7 @@ public class GridSatView extends View {
         setFocusable(true); // make sure we get key events
         locationStatus = LOCATION_STATUS_OKAY;
         loadingSatellites = true;
+        updatingTLEs = false;
         losElDeg = 55;
         losAzDeg = (float) 357.5;
         pixPerDeg = 50;
@@ -726,20 +792,13 @@ public class GridSatView extends View {
         geoSatelliteDrawable = ContextCompat.getDrawable(context, R.drawable.ic_saticon_yellow);
         leoSatelliteDrawable = ContextCompat.getDrawable(context, R.drawable.ic_saticon_green);
         deepSatelliteDrawable = ContextCompat.getDrawable(context, R.drawable.ic_saticon_red);
+        cDeepSatelliteDrawable = ContextCompat.getDrawable(context, R.drawable.ic_saticon_pink);
+        cGeoSatelliteDrawable = ContextCompat.getDrawable(context, R.drawable.ic_saticon_orange);
         orangeColor = ContextCompat.getColor(context, R.color.colorOrange);
         saveSharingImage = false;
-        mySharingFile = new File(getAlbumStorageDir(LOOK_UP), SHARING_IMAGE_NAME);
+        mySharingFile = new File(getAlbumStorageDir(LOOK_UP, context), SHARING_IMAGE_NAME);
     }
 
-    public File getAlbumStorageDir(String albumName) {
-        // Get the directory for the user's public pictures directory.
-        File file = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), albumName);
-        if (!file.mkdirs()) {
-            Log.i(this.getClass().getName(), "directory not created");
-        }
-        return file;
-    }
     /**
      * Status bar takes up pixels at the top of the canvas; want to draw FABs with a margin below the status bar
      *

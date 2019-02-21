@@ -1,13 +1,12 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.SQLException;
@@ -25,7 +24,6 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
@@ -40,10 +38,10 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.PopupMenu;
 
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationSettingsStatusCodes;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -52,14 +50,77 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import satellite.Satellite;
-import static com.cyclebikeapp.upinthesky.Constants.*;
-import static android.preference.PreferenceManager.getDefaultSharedPreferences;
 
-public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback, SensorEventListener, PopupMenu.OnMenuItemClickListener {
+import static android.preference.PreferenceManager.getDefaultSharedPreferences;
+import static com.cyclebikeapp.lookup.Constants.CC_MAP_KEY_NORAD_NUMBER;
+import static com.cyclebikeapp.lookup.Constants.CC_MAP_KEY_SAT_NAME;
+import static com.cyclebikeapp.lookup.Constants.CDEEP;
+import static com.cyclebikeapp.lookup.Constants.CGEO;
+import static com.cyclebikeapp.lookup.Constants.DB_KEY_SAT_INFO_LINK;
+import static com.cyclebikeapp.lookup.Constants.DEEP;
+import static com.cyclebikeapp.lookup.Constants.DEF_LOS_AZIMUTH;
+import static com.cyclebikeapp.lookup.Constants.DEF_LOS_ELEV;
+import static com.cyclebikeapp.lookup.Constants.FREE_VERSION;
+import static com.cyclebikeapp.lookup.Constants.GEO;
+import static com.cyclebikeapp.lookup.Constants.LEO;
+import static com.cyclebikeapp.lookup.Constants.LOOKAFTERSTUFF_INITIAL_DELAY_TIME;
+import static com.cyclebikeapp.lookup.Constants.LOOKAFTERSTUFF_REPEAT_TIME;
+import static com.cyclebikeapp.lookup.Constants.MAX_CLICK_DISTANCE;
+import static com.cyclebikeapp.lookup.Constants.MAX_CLICK_DURATION;
+import static com.cyclebikeapp.lookup.Constants.MAX_ELEV;
+import static com.cyclebikeapp.lookup.Constants.MAX_LIVE_ZOOM;
+import static com.cyclebikeapp.lookup.Constants.MAX_TOTAL_ZOOM;
+import static com.cyclebikeapp.lookup.Constants.MCCANTS_DATA_SIZE;
+import static com.cyclebikeapp.lookup.Constants.MIN_TOTAL_ZOOM;
+import static com.cyclebikeapp.lookup.Constants.MOBILE_DATA_SETTING_KEY;
+import static com.cyclebikeapp.lookup.Constants.NAV_DRAWER_LIVE_MODE_KEY;
+import static com.cyclebikeapp.lookup.Constants.ONE_MINUTE;
+import static com.cyclebikeapp.lookup.Constants.PAID_VERSION;
+import static com.cyclebikeapp.lookup.Constants.PERMISSIONS_REQUEST_CAMERA;
+import static com.cyclebikeapp.lookup.Constants.PERMISSIONS_REQUEST_LOCATION;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_LIVE_MODE;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_LOSAZ;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_LOSEL;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_PANAZ;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_PANEL;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_SHOWN_LIVEMODE_HINT;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_SHOWN_PAUSEDMODE_HINT;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_TEMP_PANAZ;
+import static com.cyclebikeapp.lookup.Constants.PREFS_KEY_TEMP_PANEL;
+import static com.cyclebikeapp.lookup.Constants.PREFS_NAME;
+import static com.cyclebikeapp.lookup.Constants.PREF_KEY_UPDATED_CELESTRAK_TLES_TIME;
+import static com.cyclebikeapp.lookup.Constants.PREF_KEY_UPDATING_TLES;
+import static com.cyclebikeapp.lookup.Constants.RC_NAV_DRAWER;
+import static com.cyclebikeapp.lookup.Constants.RECALC_LOOKANGLES_INITIAL_DELAY_TIME;
+import static com.cyclebikeapp.lookup.Constants.RECALC_LOOKANGLES_REPEAT_TIME;
+import static com.cyclebikeapp.lookup.Constants.REQUEST_CHANGE_LOCATION_SETTINGS;
+import static com.cyclebikeapp.lookup.Constants.REQUEST_CHANGE_WIFI_SETTINGS;
+import static com.cyclebikeapp.lookup.Constants.REQUEST_CHECK_SETTINGS;
+import static com.cyclebikeapp.lookup.Constants.REQUEST_RESOLVE_ERROR;
+import static com.cyclebikeapp.lookup.Constants.SDF_KEY_LINK;
+import static com.cyclebikeapp.lookup.Constants.SDF_KEY_MESSAGE;
+import static com.cyclebikeapp.lookup.Constants.SDF_KEY_NORAD_NUMBER;
+import static com.cyclebikeapp.lookup.Constants.SDF_KEY_NUM_SEARCH_RESULTS;
+import static com.cyclebikeapp.lookup.Constants.SDF_KEY_STATUS;
+import static com.cyclebikeapp.lookup.Constants.SDF_KEY_TITLE;
+import static com.cyclebikeapp.lookup.Constants.SPACETRACK_DATA_SIZE;
+import static com.cyclebikeapp.lookup.Constants.TWENTY_FOUR_HOURS;
+import static com.cyclebikeapp.lookup.Constants.badLink;
+import static com.cyclebikeapp.lookup.Constants.nssdcLinkBase;
+import static com.cyclebikeapp.lookup.SatelliteDialogFragment.MAIN;
+import static com.cyclebikeapp.lookup.Util.getDeclinationFromSharedPrefs;
+import static com.cyclebikeapp.lookup.Util.readingSatFiles;
+import static com.cyclebikeapp.lookup.Util.satelliteFilesWereRead;
+import static com.cyclebikeapp.lookup.Util.updatingTLEs;
+
+@SuppressWarnings("ConstantConditions")
+public class MainActivity extends AppCompatActivity
+        implements SurfaceHolder.Callback, SensorEventListener, PopupMenu.OnMenuItemClickListener {
     // ** change these values depending on APK type (DEVELOPMENT OR PRODUCTION)
     public static final int version = PAID_VERSION;
     public static final boolean DEBUG = true;
-    //**
+    public static final boolean WRITE_ALLSATSFILE = false;
+    public static final boolean WRITE_ALLTLES = true;
     // Timers and Handlers for periodic tasks
     private Handler lookAfterStuffHandler;
     private Timer lookAfterStuffTimer;
@@ -80,14 +141,14 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     // a Class to set-up and maintain the camera preview in LiveMode
     private CameraPreview mCameraPreview;
     private SensorManager mSensorManager;
-    Sensor sensorGravity;
-    Sensor sensorAccel;
-    Sensor sensorMagField;
+    private Sensor sensorGravity;
+    private Sensor sensorAccel;
+    private Sensor sensorMagField;
     // data from Sensors
     private float[] mGravityVector;
     private float[] mMagFieldValues;
     // some Android devices don't have a compass
-    boolean hasMagSensor;
+    private boolean hasMagSensor;
     // gesture detector to handle pinch zooming for camera and satellite canvas
     private ScaleGestureDetector mScaleDetector;
 
@@ -99,13 +160,14 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     private boolean complainedMagSensor;
     private boolean complainedCameraPermission;
     // pop-up windows directing user to make System Settings changes
-    private Snackbar mPermissionSnackbar;
+    private Snackbar mMobileDataPermissionSnackbar;
     private Snackbar mWirelessSettingsSnackbar;
     private Snackbar mHintSnackBar;
     private Snackbar mLocationSettingsSnackBar;
     private Snackbar mCameraPermissionSnackBar;
     // prevent multiple access to AsyncTask for rebuilding satellites
     private boolean rebuildingSatellites;
+    private ArrayList<Snackbar> snackBarList;
 
     /**
      * Invoked when the Activity is created.
@@ -117,14 +179,14 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (DEBUG){Log.w(this.getClass().getName(), "onCreate()");}
+        mLocationHelper = new LocationHelper(getApplicationContext());
         // create satDB
         dataBaseAdapter = new SATDBAdapter(getApplicationContext());
         dataBaseAdapter.open();
-        mLocationHelper = new LocationHelper(getApplicationContext());
-        mLocationHelper.mResolvingError = savedInstanceState != null
-                && savedInstanceState.getBoolean(STATE_RESOLVING_ERROR, false);
+        snackBarList = new ArrayList<>();
+        //test if GooglePlay Services is available and up to date
+        googlePlayAvailable(getApplicationContext());
         mSatCalculator = new SatelliteTabulator(this);
-
         // Handlers and Timers for repeating tasks
         lookAfterStuffHandler = new Handler();
         recalcLookAnglesHandler = new Handler();
@@ -132,6 +194,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         recalcLookAnglesTimer = new Timer();
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mGridSatView = new GridSatView(this, null);
+
         mCameraPreview = new CameraPreview(this);
         mHolder = mCameraPreview.getHolder();
         // we handle all the changes to the camera preview surface from MainActivity
@@ -142,22 +205,18 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         addContentView(mGridSatView, new FrameLayout.LayoutParams
                 (FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
         rebuildingSatellites = false;
+
         // load GEO_withTLEs satDB data from file and update DB; wait before executing so database opens
         mGridSatView.postDelayed(new Runnable() {
             @Override
             public void run() {
-                dataBaseAdapter.readGEOwithTLEsFileFromAssetAsync(getApplicationContext());
+                new InitGEOwithTLESatsBackground().execute();
             }
         }, 50);
         // When apk is first loaded we have to read the _withTLEs file and build the dataBase for GEO satellites.
         // rebuild the GEO satellites just before we start LookAfterStuff, so we show the user something while waiting
         // to read other satellite files and retrieving TLEs (in paid version).
-        mGridSatView.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                new RebuildSatellitesBackground().execute();
-            }
-        }, LOOKAFTERSTUFF_INITIAL_DELAY_TIME - ONE_SECOND );
+        mGridSatView.invalidate();
         // "complaining" means showing a Snackbar dialog
         complainedLocationOld = false;
         // we don't update TLEs in Free Version, so don't ever complain
@@ -174,7 +233,18 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putBoolean(STATE_RESOLVING_ERROR, mLocationHelper.mResolvingError);
+    }
+    private boolean askLocationPermission() {
+        if (Util.hasFineLocationPermission(getApplicationContext())) {
+            if (DEBUG) Log.i(this.getClass().getName(), "ask Location permission: has location permission");
+            return true;
+        } else {
+            // Request permission
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSIONS_REQUEST_LOCATION);
+            return false;
+        }
     }
 
     @Override
@@ -185,16 +255,8 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             case PERMISSIONS_REQUEST_LOCATION: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    if (!rebuildingSatellites) {
-                        new RebuildSatellitesBackground().execute();
-                    }
-                    if (!mLocationHelper.mGoogleApiClient.isConnected()) {
-                        // reconnect() will also do .startLocationUpdates() in on Connect() callback
-                        mLocationHelper.mGoogleApiClient.reconnect();
-                    } else {
-                        mLocationHelper.stopLocationUpdates();
-                        mLocationHelper.startLocationUpdates(mLocationHelper.createLocationRequest());
-                    }
+                    mLocationHelper.stopLocationUpdates();
+                    mLocationHelper.startLocationUpdates();
                 }
             }//location permissions case
             break;
@@ -229,10 +291,12 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 if (!rebuildingSatellites) {
                     // have to set this flag to rebuild GEOs too
                     dataBaseAdapter.setRebuildGEOSatellites(true);
+                    dataBaseAdapter.setRebuildCGEOSatellites(true);
                     mGridSatView.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            new RebuildSatellitesBackground().execute();
+                            //new RebuildSatellitesBackground().execute();
+                            rebuildSatellites();
                         }
                     }, 100);
                 }
@@ -244,15 +308,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 }
                 break;
             case REQUEST_RESOLVE_ERROR:
-                mLocationHelper.mResolvingError = false;
-                mLocationHelper.connectionFailureResult = null;
-                if (resultCode == RESULT_OK) {
-                    // Make sure the app is not already connected or attempting to connect
-                    if (!mLocationHelper.mGoogleApiClient.isConnecting() &&
-                            !mLocationHelper.mGoogleApiClient.isConnected()) {
-                        mLocationHelper.mGoogleApiClient.connect();
-                    }
-                }
+
                 break;
             case REQUEST_CHECK_SETTINGS:
                 switch (resultCode) {
@@ -260,10 +316,12 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                         // All required changes were successfully made user changed location settings
                         if (!rebuildingSatellites) {
                             dataBaseAdapter.setRebuildGEOSatellites(true);
+                            dataBaseAdapter.setRebuildCGEOSatellites(true);
                             mGridSatView.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {
-                                    new RebuildSatellitesBackground().execute();
+                                    //new RebuildSatellitesBackground().execute();
+                                    rebuildSatellites();
                                 }
                             }, 100);
                         }
@@ -275,16 +333,21 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                         break;
                 }
                 break;
+
             case REQUEST_CHANGE_LOCATION_SETTINGS:
                 switch (resultCode) {
                     case Activity.RESULT_OK:
+                        mLocationHelper.stopLocationUpdates();
+                        mLocationHelper.startLocationUpdates();
                         // All required changes were successfully made user changed location settings
                         if (!rebuildingSatellites) {
                             dataBaseAdapter.setRebuildGEOSatellites(true);
+                            dataBaseAdapter.setRebuildCGEOSatellites(true);
                             mGridSatView.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {
-                                    new RebuildSatellitesBackground().execute();
+                                    //new RebuildSatellitesBackground().execute();
+                                    rebuildSatellites();
                                 }
                             }, 100);
                         }
@@ -307,7 +370,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                         // The user was asked to change WiFi settings, but chose not to
                         // pretend that we've updated TLEs today so LookAfterStuff doesn't keep asking
                         SharedPreferences.Editor editor1 = getSharedPreferences(PREFS_NAME, 0).edit();
-                        editor1.putLong(PREF_KEY_UPDATED_TLES_TIME, System.currentTimeMillis()).apply();
+                        editor1.putLong(PREF_KEY_UPDATED_CELESTRAK_TLES_TIME, System.currentTimeMillis()).apply();
                          break;
                     default:
                         break;
@@ -385,8 +448,13 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     protected void onDestroy() {
         if (DEBUG){Log.w(this.getClass().getName(), "onDestroy()");}
         super.onDestroy();
+        mLocationHelper.stopLocationUpdates();
     }
-
+    @Override
+    protected void onStart() {
+        if (DEBUG) { Log.w(this.getClass().getName(), "onStart()"); }
+        super.onStart();
+    }
     @Override
     protected void onResume() {
         if (DEBUG){Log.w(this.getClass().getName(), "onResume()");}
@@ -394,13 +462,11 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         // if we don't have an internet connection, WiFi or Mobile, but we have fine location permission and GPS location enabled,
         // try to get location from GPS; default is location from Network provider.
         // If that is disabled and can't get GPS Location, we'll ask to correct later.
-        if (Util.hasFineLocationPermission(getApplicationContext())
-                && !Util.hasInternetConnection(getApplicationContext())
-                && Util.isGPSLocationEnabled(getApplicationContext())) {
-            mLocationHelper.priority = LocationRequest.PRIORITY_HIGH_ACCURACY;
+        if (askLocationPermission()) {
+            mLocationHelper.stopLocationUpdates();
+            mLocationHelper.startLocationUpdates();
         }
         initializeSnackBars();
-        mLocationHelper.mGoogleApiClient.connect();
         // we close the database during onStop to release resources; reconnect to DB here if it's closed
         try {
             if (dataBaseAdapter != null && dataBaseAdapter.isClosed()) {
@@ -412,8 +478,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 /*        if (mCameraPreview.mCamera == null){
             mCameraPreview.connectCamera(mHolder);
         }*/
-        //retrieve valid myLocation from sharedPrefs, or current from LocationHelper.myLocation
-        mLocationHelper.setMyLocation(Util.getLocFromSharedPrefs(getSharedPreferences(PREFS_NAME, 0)));
         setLocationStatus();
         startLookingAfterStuff();
         startRecalculatingLookAngles();
@@ -431,9 +495,8 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         mGridSatView.tempPanEl = settings.getFloat(PREFS_KEY_TEMP_PANEL, 0f);
         mGridSatView.panAz = settings.getFloat(PREFS_KEY_PANAZ, 0f);
         mGridSatView.panEl = settings.getFloat(PREFS_KEY_PANEL, 0f);
-        mLocationHelper.magDeclination = mLocationHelper.getDeclinationFromSharedPrefs();
         // copy magDeclination to GridSatView so it can correct longitude line labels
-        mGridSatView.magDeclination = mLocationHelper.magDeclination;
+        mGridSatView.magDeclination = getDeclinationFromSharedPrefs(getApplicationContext());
     }
 
     /**
@@ -466,7 +529,8 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 String title = satString[0];
                 String message = satString[1];
                 String link = satString[2];
-                satelliteDialog(title, message, link);
+                String status = satString[5];
+                showSatelliteDialogFragment(status, title, message, link, noradNumber);
             }
         }
     }
@@ -503,13 +567,14 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
      */
     @Override
     public boolean onMenuItemClick(MenuItem item) {
-        long noradNumber = item.getItemId();
+        int noradNumber = item.getItemId();
         String[] satString = dataBaseAdapter.fetchDeviceData(noradNumber);
         // now using Norad num show pop-up dialog with name, brief description and link
         String title = satString[0];
         String message = satString[1];
         String link = satString[2];
-        satelliteDialog(title, message, link);
+        String status = satString[5];
+        showSatelliteDialogFragment(status, title, message, link, noradNumber);
         return true;
     }
 
@@ -540,6 +605,16 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         }
         if (mGridSatView.mDeepSatellites != null && version == PAID_VERSION) {
             for (Satellite aSat : mGridSatView.mDeepSatellites) {
+                addSatToList(lookAngAz, lookAngEl, tol, returnList, aSat);
+            }
+        }
+        if (mGridSatView.mCDeepSatellites != null && version == PAID_VERSION) {
+            for (Satellite aSat : mGridSatView.mCDeepSatellites) {
+                addSatToList(lookAngAz, lookAngEl, tol, returnList, aSat);
+            }
+        }
+        if (mGridSatView.mCGEOSatellites != null && version == PAID_VERSION) {
+            for (Satellite aSat : mGridSatView.mCGEOSatellites) {
                 addSatToList(lookAngAz, lookAngEl, tol, returnList, aSat);
             }
         }
@@ -595,71 +670,100 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             dataBaseAdapter.close();
         }
         mLocationHelper.stopLocationUpdates();
-        mLocationHelper.mGoogleApiClient.disconnect();
         stopLookingAfterStuff();
         stopRecalculatingLookAngles();
         mCameraPreview.stopPreview();
         mCameraPreview.releaseCamera();
     }
+    private void showSatelliteDialogFragment(String status,
+            String dialog_title,
+            String dialog_message,
+            final String link,
+            final int noradNumber) {
+        String satelliteLocationString = getString(R.string.location_string, noradNumber);
+        Bundle dialogBundle = new Bundle();
+        dialogBundle.putCharSequence(SDF_KEY_TITLE, dialog_title);
+        dialogBundle.putCharSequence(SDF_KEY_MESSAGE, satelliteLocationString + dialog_message);
+        dialogBundle.putCharSequence(SDF_KEY_LINK, link);
+        dialogBundle.putCharSequence(SDF_KEY_STATUS, status);
+        dialogBundle.putInt(SDF_KEY_NORAD_NUMBER, noradNumber);
+        dialogBundle.putInt(SDF_KEY_NUM_SEARCH_RESULTS, 0);
+        SatelliteDialogFragment newFragment = SatelliteDialogFragment.newInstance(dialogBundle);
+        newFragment.show(getFragmentManager(), MAIN);
+    }
 
-    private void satelliteDialog(String dialog_title, String dialog_message, final String link) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setMessage(dialog_message)
-                .setTitle(dialog_title)
-                .setIcon(R.drawable.ic_ufo)
-                // Add the buttons
-                .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // User clicked OK button, just exit dialog
-                    }
-                })
-                .setNegativeButton(R.string.more_info, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // User clicked More Info button; start Intent to navigate to provided link
-                        String url = link.trim();
-                        if (!link.startsWith(getString(R.string.http_)) && !link.startsWith(getString(R.string.https_))) {
-                            url = getString(R.string.http_) + link;
-                        }
-                        // if !hasWiFiInternetConnection && !hasMobileInternetPermission ask for mobileInternetPermission
-                        // else must be okay to send browseIntent. If no internet connection, browser will complain
-                        final Intent browseIntent = new Intent(Intent.ACTION_VIEW);
-                        browseIntent.setData(Uri.parse(url));
-                        final PackageManager packageManager = MainActivity.this.getPackageManager();
-                        if (!Util.hasWifiInternetConnection(getApplicationContext())
-                        && !Util.hasMobileInternetPermission(getDefaultSharedPreferences(getApplicationContext()))) {
-                            // doesn't have Mobile data Permission
-                            StringBuilder snackBarString = new StringBuilder(getString(R.string.ask_mobile_internet_permission));
-                            // show snackbar to ask permission to browse over mobile data
-                            mPermissionSnackbar = Snackbar.make(
-                                    mGridSatView,
-                                    snackBarString,
-                                    Snackbar.LENGTH_INDEFINITE);
-                            mPermissionSnackbar.setAction(R.string.allow, new View.OnClickListener() {
+    public void doSatelliteDialogPostiveClick() {
+        // User clicked OK button, just exit dialog
+    }
 
-                                @Override
-                                public void onClick(View v) {
-                                    //"Allow" clicked, change hasMobileDataPermission
-                                    SharedPreferences settings = getDefaultSharedPreferences(getApplicationContext());
-                                    SharedPreferences.Editor editor = settings.edit();
-                                    editor.putString(MOBILE_DATA_SETTING_KEY, "1").apply();
-                                    // now have permission to browse
-                                    if (browseIntent.resolveActivity(packageManager) != null) {
-                                        startActivity(browseIntent);
-                                    } else {
-                                        Log.w(this.getClass().getName(), getString(R.string.no_browser));
-                                    }
-                                }
-                            }).show();
-                        } else { //already have Mobile Data permission, or WiFi connection
-                            if (browseIntent.resolveActivity(packageManager) != null) {
-                                startActivity(browseIntent);
-                            } else {
-                                Log.w(this.getClass().getName(), getString(R.string.no_browser));
-                            }
+    public void doSatelliteDialogNegativeClick(Bundle bundle) {
+        if (MainActivity.version == Constants.FREE_VERSION) {
+            // User clicked Upgrade button; start Intent to go to Play Store
+            String appPackageName = "com.cyclebikeapp.lookup";
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + appPackageName)));
+            } catch (android.content.ActivityNotFoundException anfe) {
+                //Play Store app not found, use Browser
+                Intent browseIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + appPackageName));
+                PackageManager packageManager = this.getPackageManager();
+                if (browseIntent.resolveActivity(packageManager) != null) {
+                    startActivity(browseIntent);
+                } else {
+                    Log.w(this.getClass().getName(), getString(R.string.no_browser));
+                }
+            }
+        } else {
+            String link = bundle.getString(Constants.SDF_KEY_LINK);
+            int noradNumber = bundle.getInt(Constants.SDF_KEY_NORAD_NUMBER);
+            // User clicked More Info button; start Intent to navigate to provided link
+            String url = link.trim();
+            if (!link.startsWith(getString(R.string.http_)) && !link.startsWith(getString(R.string.https_))) {
+                url = getString(R.string.http_) + link;
+            }
+            // if link.contains "badLink", use NSSDC link based on Int'l code
+            if (url.toUpperCase().contains(badLink)) {
+                if (DEBUG) {
+                    Log.w(this.getClass().getName(), "substituting NSSDC URL for bad link");
+                }
+                String[] someData = dataBaseAdapter.fetchDeviceData(noradNumber);
+                String intlCode = someData[4];
+                url = nssdcLinkBase + intlCode;
+            }
+            // also run link tester and label this as a bad link if error; replace dblink with "badLink"
+            new TestURL().execute(url, String.valueOf(noradNumber));
+            // if !hasWiFiInternetConnection && !hasMobileInternetPermission ask for mobileInternetPermission
+            // else must be okay to send browseIntent. If no internet connection, browser will complain
+            final Intent browseIntent = new Intent(Intent.ACTION_VIEW);
+            browseIntent.setData(Uri.parse(url));
+            final PackageManager packageManager = MainActivity.this.getPackageManager();
+            if (!Util.hasWifiInternetConnection(getApplicationContext())
+                    && !Util.hasMobileInternetPermission(getDefaultSharedPreferences(getApplicationContext()))) {
+                // doesn't have Mobile data Permission
+
+                mMobileDataPermissionSnackbar.setAction(R.string.allow, new View.OnClickListener() {
+
+                    @Override
+                    public void onClick(View v) {
+                        //"Allow" clicked, change hasMobileDataPermission
+                        SharedPreferences settings = getDefaultSharedPreferences(getApplicationContext());
+                        SharedPreferences.Editor editor = settings.edit();
+                        editor.putString(MOBILE_DATA_SETTING_KEY, "1").apply();
+                        // now have permission to browse
+                        if (browseIntent.resolveActivity(packageManager) != null) {
+                            startActivity(browseIntent);
+                        } else {
+                            Log.w(this.getClass().getName(), getString(R.string.no_browser));
                         }
                     }
-                })
-                .show();
+                }).show();
+            } else { //already have Mobile Data permission, or WiFi connection
+                if (browseIntent.resolveActivity(packageManager) != null) {
+                    startActivity(browseIntent);
+                } else {
+                    Log.w(this.getClass().getName(), getString(R.string.no_browser));
+                }
+            }
+        }
     }
 
     /**
@@ -676,16 +780,32 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                         //it's nice to update locationStatus quickly here
                         mGridSatView.setLocationStatus(testSharedPrefsLocationIsCurrent());
                         if (version == PAID_VERSION) {
+                            // if we're still loading satellites tell GridSatView to display message
+                            mGridSatView.loadingSatellites = readingSatFiles(getSharedPreferences(PREFS_NAME, 0))
+                                    || !satelliteFilesWereRead(getSharedPreferences(PREFS_NAME, 0));
+                            mGridSatView.updatingTLEs = updatingTLEs(getSharedPreferences(PREFS_NAME, 0));
+
+                            long startTime =  System.nanoTime();
+                            long timeNow = Util.getNowTime();
+                            int numSatellites = 0;
                             if (mGridSatView.getLocationStatus() == GridSatView.LOCATION_STATUS_OKAY
                                     || mGridSatView.getLocationStatus() == GridSatView.LOCATION_STATUS_OLD) {
                                 if (mGridSatView.mLEOSatellites != null) {
+                                    numSatellites += mGridSatView.mLEOSatellites.size();
                                     mSatCalculator.recalculateLookAngles(mGridSatView.mLEOSatellites,
-                                            mLocationHelper.getMyLocation(), mLocationHelper.systemCurrentTimeOffset);
+                                            mLocationHelper.getMyLocation(), timeNow);
                                 }
                                 if (mGridSatView.mDeepSatellites != null) {
+                                    numSatellites += mGridSatView.mDeepSatellites.size();
                                     mSatCalculator.recalculateLookAngles(mGridSatView.mDeepSatellites,
-                                            mLocationHelper.getMyLocation(), mLocationHelper.systemCurrentTimeOffset);
+                                            mLocationHelper.getMyLocation(), timeNow);
                                 }
+                                if (mGridSatView.mCDeepSatellites != null) {
+                                    numSatellites += mGridSatView.mCDeepSatellites.size();
+                                    mSatCalculator.recalculateLookAngles(mGridSatView.mCDeepSatellites,
+                                            mLocationHelper.getMyLocation(), timeNow);
+                                }
+
                             }
                         }
                         // redraw the satellites
@@ -697,7 +817,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         // repeat time should be fast enough to track LEO satellites
         // a Leo sat with period of 90 minutes that traverses 90 deg of my sky goes at 1 deg per minute
         // with a scale factor of 50 pixels per degree the sat moves 50 pixels per minute; update every 20 sec
-        // initially wait a minute befoer doing this for the first time to let TLEs come in from Space-Track.org
+        // initially wait a minute before doing this for the first time to let TLEs come in from Space-Track.org
         recalcLookAnglesTimer.schedule(recalcLookAnglesTask, RECALC_LOOKANGLES_INITIAL_DELAY_TIME, RECALC_LOOKANGLES_REPEAT_TIME);
     }
 
@@ -709,14 +829,60 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         }
     }
 
-    /**
-     * in LookAfterStuff TimerTask, rebuild satellites in AsyncTask
-     * LEO and DEEP satellites may rise or set
-     */
-    private class RebuildSatellitesBackground extends AsyncTask<Void, Void, Void> {
-
+    private class InitGEOwithTLESatsBackground extends AsyncTask<Void, Void, Void> {
+        /**
+         * On first execution of app, load the GEOwithTLEs file into the database, then build satellites so
+         * something shows up quickly. After this we can load the other satellite files and fetch TLEs.
+         */
         @Override
         protected Void doInBackground(Void... params) {
+            dataBaseAdapter.readGEOwithTLEsFileFromAsset(getApplicationContext());
+            return null;
+        }
+        @Override
+        protected void onPostExecute(Void result) {
+            super.onPostExecute(result);
+            if (DEBUG){Log.w(this.getClass().getName(), "finished reading GEOsatellites_withTLEs file");}
+            rebuildSatellites();
+        }
+    }
+
+    /**
+     * Check url for a bad link when clicking the "More Info" button in a satellite Dialog
+     * Use the same routine as downloading TLEs from Celestrak. It will throw an IOException
+     * if the link is bad, so then replace the link in the dataBase with "badLink". The next time
+     * the user clicks on the MoreInfo button we'll re-direct to the default link to NSSDC
+     */
+    public class TestURL extends AsyncTask<String, Void, Void> {
+
+        @Override
+        protected Void doInBackground(String... url) {
+            GetTLEsFromCelestrak ctfc = new GetTLEsFromCelestrak();
+            try {
+                ctfc.downloadUrl(url[0]);
+            } catch (IOException e) {
+                if (DEBUG) { Log.w(this.getClass().getName(), "testing URL... bad link"); }
+                int noradNumber = Integer.parseInt(url[1]);
+                ContentValues badLinkContent = new ContentValues();
+                badLinkContent.put(DB_KEY_SAT_INFO_LINK, badLink);
+                dataBaseAdapter.updateSatelliteRecord(noradNumber, badLinkContent);
+                return null;
+            }
+            if (DEBUG) { Log.w(this.getClass().getName(), "testing URL... seems okay"); }
+            return null;
+        }
+    }
+
+    private void rebuildSatellites() {
+        SerialExecutor rebuildSats = new SerialExecutor();
+        rebuildSats.execute(rebuildSatellitesRunnable);
+        rebuildSats.execute(setNotRebuildingFlagRunnable);
+    }
+
+    private Runnable rebuildSatellitesRunnable = new Runnable() {
+
+        @Override
+        public void run() {
             //if mGEOSatellites size == 0, rebuild them because we didn't when we started-up, maybe because Location was null
             // (if we have an asset file _withTLEs_ this shouldn't happen)
             //if LocationHelper.rebuildSatellites, rebuild GEO satellites because we have a new Location
@@ -724,36 +890,45 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             // reset flag to rebuild GEOs
             // always rebuild LEO and DEEP satellites, except in free version
             // these may be null if the app quits before doInBackground finishes
-            if (mLocationHelper == null || dataBaseAdapter == null){
-                return null;
-            }
-            if (mLocationHelper.getMyLocation() == null){
-                return  null;
+            if (mLocationHelper == null || dataBaseAdapter == null || mLocationHelper.getMyLocation() == null) {
+                return;
             }
             rebuildingSatellites = true;
+            //use adjusted time to rebuild satellites, not System.currentTimeMillis()
+            long timeNow = Util.getNowTime();
             if (mGridSatView.mGEOSatellites == null
-                    || mLocationHelper.shouldRebuildGEOSatellites()
                     || dataBaseAdapter.shouldRebuildGEOSatellites()) {
                 mGridSatView.mGEOSatellites = mSatCalculator.buildSatellitesByKind(mLocationHelper.getMyLocation(),
-                        System.currentTimeMillis(), dataBaseAdapter, GEO);
+                        timeNow, dataBaseAdapter, GEO);
                 dataBaseAdapter.setRebuildGEOSatellites(false);
-                mLocationHelper.setShouldRebuildGEOSatellites(false);
+            }
+            if (mGridSatView.mCGEOSatellites == null
+                    || dataBaseAdapter.shouldRebuildCGEOSatellites()
+                    && (version == PAID_VERSION)) {
+                mGridSatView.mCGEOSatellites = mSatCalculator.buildSatellitesByKind(mLocationHelper.getMyLocation(),
+                        timeNow, dataBaseAdapter, CGEO);
+                dataBaseAdapter.setRebuildCGEOSatellites(false);
             }
             // only build LEO and DEEP satellites in paid version
             if (version == PAID_VERSION) {
                 mGridSatView.mLEOSatellites = mSatCalculator.buildSatellitesByKind(mLocationHelper.getMyLocation(),
-                        System.currentTimeMillis(), dataBaseAdapter, LEO);
+                        timeNow, dataBaseAdapter, LEO);
                 mGridSatView.mDeepSatellites = mSatCalculator.buildSatellitesByKind(mLocationHelper.getMyLocation(),
-                        System.currentTimeMillis(), dataBaseAdapter, DEEP);
+                        timeNow, dataBaseAdapter, DEEP);
+                mGridSatView.mCDeepSatellites = mSatCalculator.buildSatellitesByKind(mLocationHelper.getMyLocation(),
+                        timeNow, dataBaseAdapter, CDEEP);
             }
-            return null;
+
         }
+    };
+
+    private Runnable setNotRebuildingFlagRunnable = new Runnable() {
+
         @Override
-        protected void onPostExecute(Void result) {
-            super.onPostExecute(result);
+        public void run() {
             rebuildingSatellites = false;
         }
-    }
+    };
 
     /**
      * 1) check that we have updated TLEs and if not, that we have a data connection
@@ -766,28 +941,27 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             return;
         }
         lookAfterStuff = new TimerTask() {
-            // data returned for each tle updated approx 1 kB, Strings are about 912 chars long
-            private static final double DATA_PER_TLE = .001;
 
             @Override
             public void run() {
                 lookAfterStuffHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        // if we're still loading satellites tell GridSatView to display message
-                        mGridSatView.loadingSatellites = getSharedPreferences(PREFS_NAME, 0).getBoolean(PREF_KEY_READING_SATFILES, false)
-                                || !Util.satelliteFilesWereRead(getSharedPreferences(PREFS_NAME, 0));
-                        new RebuildSatellitesBackground().execute();
+                        rebuildSatellites();
                         // only read satellite files if we've read-in the GEO_withTLEs file and built those satellites; mGEOSatellites.size() > 1
                         // otherwise, we have to wait several minutes to read sat files and this blocks AsyncTask from building initial GEO satellites
-                        if (DEBUG) {Log.w(this.getClass().getName(), "sat files were read: "
-                                + (Util.satelliteFilesWereRead(getSharedPreferences(PREFS_NAME, 0))?"yes":"no"));}
-                        if (!Util.satelliteFilesWereRead(getSharedPreferences(PREFS_NAME, 0))) {
-                            // reload satDB data from file and update DB
+                        if (DEBUG) {Log.w(this.getClass().getName(), "lookAfterStuff -sat files were read: "
+                                + (satelliteFilesWereRead(getSharedPreferences(PREFS_NAME, 0))?"yes":"no")
+                                + " reading  sat files: "
+                                + (readingSatFiles(getSharedPreferences(PREFS_NAME, 0))?"yes":"no"));}
+                        if (!satelliteFilesWereRead(getSharedPreferences(PREFS_NAME, 0))
+                                && !readingSatFiles(getSharedPreferences(PREFS_NAME, 0))) {
+                            // reload satDB data from file and update DB, but wait until reading GEO_withTLEs file
                             if (DEBUG) {Log.w(this.getClass().getName(), "re-reading SatFiles...");}
-                            dataBaseAdapter.readSatFilesFromAssetAsync(getApplicationContext());
+                            dataBaseAdapter.readSatFilesFromAssetAsync();
                         }
                         testLocationIsCurrent();
+                        setLocationStatus();
                         testTLEsAreCurrent();
                         complainCameraPermission();
                         showSnackBarHints();
@@ -798,6 +972,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             private void complainCameraPermission() {
                 // if not Android M or greater, return
                 // if we have camera permission, return
+                // if any SnackBar is showing, return
                 // if we've already complained, return
                 // if we haven't complained about current Location or current TLEs, return
                 if (DEBUG) {
@@ -814,14 +989,13 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 }
                 // wait until we've complained about Location and have updated TLEs
                 // if we've already complained once since the app was first launched
-                if (!complainedLocationOld || !haveCheckedForUpdatedTLEs || complainedCameraPermission) {
+                if (!complainedLocationOld || !haveCheckedForUpdatedTLEs || complainedCameraPermission
+                        || Util.isAnySnackBarVisible(snackBarList)) {
                     return;
                 }
                 complainedCameraPermission = true;
                 // show snack bar explaining why camera is needed, ask permission
-                if (DEBUG) {
-                    Log.w(this.getClass().getName(), "Complaining about camera Permission");
-                }
+                if (DEBUG) { Log.w(this.getClass().getName(), "Complaining about camera Permission"); }
                 mCameraPermissionSnackBar.setAction(getString(R.string.allow), new View.OnClickListener() {
 
                     @Override
@@ -836,11 +1010,13 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             }
 
             private void testTLEsAreCurrent() {
-                // no sense in updating TLEs until we at least have a Location. We don't update TLEs in free version
-                if (testSharedPrefsLocationIsCurrent() == GridSatView.LOCATION_STATUS_NONE || (version == FREE_VERSION)) {
+                SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+                SharedPreferences.Editor settingsEditor = settings.edit();
+                // We don't update TLEs in free version
+                if ((version == FREE_VERSION)) {
+                    settingsEditor.putBoolean(PREF_KEY_UPDATING_TLES, false).apply();
                     return;
                 }
-                SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
                 // 1) test if TLE update time is old (> 1 day)
                 //      a) or we haven't loaded all satellites initially
                 //      b) or we haven't built all the satellites;
@@ -851,19 +1027,26 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 // 4) if TLEs not current and have update permission and no data connection complain;
                 // 5) call updateTLEsAsync if conditions have been met (have data connection & permission)
 
-                // checkTLEsNeedUpdating just tests the time of the last check for updates. We'll only check every day.
-                boolean shouldUpdateTLEs = Util.checkTLEsNeedUpdating(settings)
+                // checkSpaceTrackTLEsNeedUpdating just tests the time of the last check for updates. We'll only check every day.
+                boolean shouldUpdateTLEs = Util.checkCelestrakStatusNeedsUpdating(settings)
                         || mGridSatView.mDeepSatellites == null
                         || mGridSatView.mLEOSatellites == null
                         || mGridSatView.mLEOSatellites.size() < 1
                         || mGridSatView.mDeepSatellites.size() < 1;
                 if (DEBUG) {
                     Log.w(this.getClass().getName(), "shouldUpdateTLEs: " + (shouldUpdateTLEs? "yes":"no")
-                            + " TLEs updated: " + Util.convertMsec2Date(settings.getLong(PREF_KEY_UPDATED_TLES_TIME, 0))
-                            + ", or " + String.format("%3.1f", (System.currentTimeMillis() - settings.getLong(PREF_KEY_UPDATED_TLES_TIME, 0))/(60.*ONE_MINUTE))
-                            + " hours ago"+ " haveCheckedForUpdatedTLEs: " + (haveCheckedForUpdatedTLEs ? "yes":"no"));
+                            + " TLEs updated: "
+                            + Util.convertMsec2Date(settings.getLong(PREF_KEY_UPDATED_CELESTRAK_TLES_TIME, 0))
+                            + ", or "
+                            + String.format("%3.1f",
+                            (System.currentTimeMillis()
+                                    - settings.getLong(PREF_KEY_UPDATED_CELESTRAK_TLES_TIME, 0))/(60.*ONE_MINUTE))
+                            + " hours ago" + " haveCheckedForUpdatedTLEs: " + (haveCheckedForUpdatedTLEs ? "yes":"no"));
                 }
-                if (shouldUpdateTLEs) {
+                if (shouldUpdateTLEs
+                        && !updatingTLEs(settings)
+                        && !readingSatFiles(settings)
+                        && !haveCheckedForUpdatedTLEs) {
                     if (Util.hasWifiInternetConnection(getApplicationContext())) {
                         // update TLEs over WiFi without asking for permission
                         dataBaseAdapter.updateTLEsAsync(getApplicationContext());
@@ -872,19 +1055,17 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                         if (!Util.hasMobileDataPermission(getDefaultSharedPreferences(getApplicationContext()))) {
                             // doesn't have WiFi data, but has Internet, ask for permission
                             // get size of required data to alert user
-                            int tleGEOUpdateNumber = dataBaseAdapter.fetchNoradNumbersToUpdate(GEO).size();
-                            int tleLEOUpdateNumber = dataBaseAdapter.fetchNoradNumbersToUpdate(LEO).size();
-                            int tleDeepUpdateNumber = dataBaseAdapter.fetchNoradNumbersToUpdate(DEEP).size();
-                            double dataSize = (tleGEOUpdateNumber + tleLEOUpdateNumber + tleDeepUpdateNumber) * DATA_PER_TLE;
+                            Util.closeAllSnackbars(snackBarList);
+                            double dataSize = MCCANTS_DATA_SIZE + SPACETRACK_DATA_SIZE;
                             StringBuilder snackBarString = new StringBuilder(getString(R.string.ask_mobile_data_permission));
                             snackBarString.append(String.format(Locale.getDefault(), "%3.3f", dataSize));
                             snackBarString.append(" MB");
                             // show snackbar to ask permission to update TLEs over mobile given data size
-                            mPermissionSnackbar = Snackbar.make(
+                            mMobileDataPermissionSnackbar = Snackbar.make(
                                     mGridSatView,
                                     snackBarString,
                                     Snackbar.LENGTH_INDEFINITE);
-                            mPermissionSnackbar.setAction(getString(R.string.allow), new View.OnClickListener() {
+                            mMobileDataPermissionSnackbar.setAction(getString(R.string.allow), new View.OnClickListener() {
 
                                 @Override
                                 public void onClick(View v) {
@@ -902,6 +1083,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                             haveCheckedForUpdatedTLEs = true;
                         }
                     } else {
+                        Util.closeAllSnackbars(snackBarList);
                         // no data connection-> complain and show snackbar with wirelessSettings Intent
                         mWirelessSettingsSnackbar.setAction(getString(R.string.open), new View.OnClickListener() {
 
@@ -912,8 +1094,11 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                             }
                         }).show();
                     }
-                }// tles need updating
+                } else { // tles don't need updating
+                    settingsEditor.putBoolean(PREF_KEY_UPDATING_TLES, false).apply();
+                }
             }
+
 
             private void showSnackBarHints() {
                 // 1a) if we've shown liveModeHint and we're in liveMode return
@@ -934,9 +1119,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                     return;
                 }
                 // don't over-write any other snackBars that haven't been dismissed
-                if (mCameraPermissionSnackBar.isShownOrQueued()
-                        || mLocationSettingsSnackBar.isShownOrQueued()
-                        || mWirelessSettingsSnackbar.isShownOrQueued()) {
+                if (Util.isAnySnackBarVisible(snackBarList)) {
                     return;
                 }
                 SharedPreferences.Editor editor = settings.edit();
@@ -961,9 +1144,9 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             }
         };
         // repeat time should be fast enough that we catch rising satellites.
-        // a Leo sat with period of 90 minutes that traverses 90 deg of my sky goes at 1 deg per minute
-        // we probably don't care if its below 5 deg in elevation, so we can do this TimerTask every 2 minutes
-        // initially wait a 10 sec before doing this for the first time to let dataBase build from asset files
+        // a Leo sat with period of 90 minutes that traverses 90 deg of my sky goes at 1 deg per minute.
+        // We probably don't care if its below 5 deg in elevation, so we can do this TimerTask every 1.5 minutes or so.
+        // Initially wait about 5 sec before doing this for the first time to let dataBase build from asset files
         // and build the first iteration of satellites
         lookAfterStuffTimer.schedule(lookAfterStuff, LOOKAFTERSTUFF_INITIAL_DELAY_TIME, LOOKAFTERSTUFF_REPEAT_TIME);
     }
@@ -976,144 +1159,35 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         }
     }
 
-    private void testLocationIsCurrent() {
-        //for debugging get locationStatus from mGridStatView
-        // for debugging, Log complainedLocationOld, hasWifiInternetConnection, hasInternetConnection,
-        // isGPSLocationEnabled, isNetworkLocationEnabled, locationStatus
-        if (DEBUG) {
-            Log.w(this.getClass().getName(), "testLocationIsCurrent() - complainedLocationOld: " + (complainedLocationOld ? "yes" : "no")
-                    + " hasWifiInternetConnection: " + (Util.hasWifiInternetConnection(getApplicationContext()) ? "yes" : "no")
-                    + " hasInternetConnection: " + (Util.hasInternetConnection(getApplicationContext()) ? "yes" : "no")
-                    + " isGPSLocationEnabled: " + (Util.isGPSLocationEnabled(getApplicationContext()) ? "yes" : "no")
-                    + " isNetworkLocationEnabled: " + (Util.isNetworkLocationEnabled(getApplicationContext()) ? "yes" : "no")
-                    + " locationStatus: " + Util.returnStringLocationStatus(mGridSatView.locationStatus));
-            Log.w(this.getClass().getName(), "testLocationIsCurrent() - is Location null?" + (mLocationHelper.getMyLocation() == null ? " yes" : " no"));
+    private void googlePlayAvailable(Context context) {
+        if (!Util.hasWifiInternetConnection(context)){
+            return;
         }
-
-        // this error doesn't come up unless there is a problem with the registration of my app with the Google API
-        if (mLocationHelper.connectionFailureResult != null) {
-            if (DEBUG){Log.w(this.getClass().getName(), "testLocationIsCurrent() - connectionFailure != null");}
-            if (mLocationHelper.mResolvingError) {
-                // Already attempting to resolve an error.
-                if (DEBUG){Log.w(this.getClass().getName(), "connectionFailure != null, already resolving error");}
-            } else if (mLocationHelper.connectionFailureResult.hasResolution()) {
-                if (DEBUG){Log.w(this.getClass().getName(), "connectionFailure != null, not already resolving, has resolution - start ResolutionForResult");}
-                try {
-                    mLocationHelper.mResolvingError = true;
-                    mLocationHelper.connectionFailureResult.startResolutionForResult(this, REQUEST_RESOLVE_ERROR);
-                } catch (IntentSender.SendIntentException e) {
-                    // There was an error with the resolution intent. Try again.
-                    mLocationHelper.mGoogleApiClient.connect();
-                }
-            } else {
-                if (DEBUG){Log.w(this.getClass().getName(), "connectionFailure != null, not already resolving, show errorDialog");}
-                // Show dialog using GoogleApiAvailability.getErrorDialog()
-                showErrorDialog(mLocationHelper.connectionFailureResult.getErrorCode());
-                mLocationHelper.mResolvingError = true;
-            }
-        }// null ConnectionFailureResult
-        // test if running under Marshmallow and Location permission denied and haven't complained and Location not okay, ask for Location permission
-        // next, if location status not okay and we haven't complained, complain in snackbar with link to location settings
-        // set boolean complainedLocationOld = true
-        else if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                && !Util.hasLocationPermission(MainActivity.this))
-                && mGridSatView.locationStatus != GridSatView.LOCATION_STATUS_OKAY
-                && !complainedLocationOld) {
-            // don't reset complainedLocationOld if we have no Location
-            if (mGridSatView.locationStatus != GridSatView.LOCATION_STATUS_NONE){
-                // LocationStatus may be Old, but don't keep complaining
-                complainedLocationOld = true;
-            }
-            // .setAction for Location settings
-            mLocationSettingsSnackBar.setAction(R.string.allow, new View.OnClickListener() {
-
-                @Override
-                public void onClick(View v) {
-                     // Show the request permissions dialog
-                    // and check the result in onActivityResult().
-                    ActivityCompat.requestPermissions(MainActivity.this,
-                            new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                            PERMISSIONS_REQUEST_LOCATION);
-                }
-            }).show();
-        }
-// don't need to ask for permission, but Location settings may need changing
-        else if (mGridSatView.locationStatus != GridSatView.LOCATION_STATUS_OKAY
-                && !complainedLocationOld
-                && mLocationHelper.locationSettingsResultStatus != null
-                && mLocationHelper.locationSettingsResultStatus.getStatusCode() == LocationSettingsStatusCodes.RESOLUTION_REQUIRED) {
-            if (DEBUG){Log.w(this.getClass().getName(), "testLocationIsCurrent() - connectionFailure == null, RESOLUTION_REQUIRED");}
-            complainedLocationOld = true;
-            // .setAction for Location settings
-            mLocationSettingsSnackBar = Snackbar.make(
-                    mGridSatView,
-                    getString(R.string.open_location_settings),
-                    Snackbar.LENGTH_INDEFINITE);
-            mLocationSettingsSnackBar.setAction(R.string.allow, new View.OnClickListener() {
-
-                @Override
-                public void onClick(View v) {
-                    try {
-                        // Show the dialog by calling startResolutionForResult(),
-                        // and check the result in onActivityResult().
-                        mLocationHelper.locationSettingsResultStatus.startResolutionForResult(
-                                MainActivity.this, REQUEST_CHECK_SETTINGS);
-                    } catch (IntentSender.SendIntentException e) {
-                        // Ignore the error.
-                        if (DEBUG) { e.printStackTrace(); }
-                    }
-                }
-            }).show();
-        } else if (mGridSatView.locationStatus != GridSatView.LOCATION_STATUS_OKAY && !complainedLocationOld) {
-            complainedLocationOld = true;
-            // didn't get "RESOLUTION_REQUIRED" status, probably because WiFi not enabled. Try asking user to
-            // enable Location Settings thru a SnackBar
-            if (!areLocationServicesAvailable(getApplicationContext())) {
-                mLocationSettingsSnackBar = Snackbar.make(
-                        mGridSatView,
-                        getString(R.string.open_location_settings),
-                        Snackbar.LENGTH_INDEFINITE);
-                mLocationSettingsSnackBar.setAction(getString(R.string.enable), new View.OnClickListener() {
-
-                    @Override
-                    public void onClick(View v) {
-                        Intent viewIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                        startActivityForResult(viewIntent, REQUEST_CHANGE_LOCATION_SETTINGS);
-                    }
-                }).show();
-            } else {
-                // have location services, but WiFi or Mobile are not on; ask for Wifi connection
-                // to get Location
-                mWirelessSettingsSnackbar = Snackbar.make(
-                        mGridSatView,
-                        getString(R.string.open_wifi_location_settings),
-                        Snackbar.LENGTH_INDEFINITE);
-                mWirelessSettingsSnackbar.setAction(getString(R.string.enable), new View.OnClickListener() {
-
-                    @Override
-                    public void onClick(View v) {
-                        Intent viewIntent = new Intent(Settings.ACTION_WIFI_SETTINGS);
-                        startActivityForResult(viewIntent, REQUEST_CHANGE_WIFI_SETTINGS);
-                    }
-                }).show();
-            }
-        }//locationStatus not Okay
-        else if (mGridSatView.locationStatus == GridSatView.LOCATION_STATUS_OKAY){
-            // don't need to complain
-            complainedLocationOld = true;
+        int googlePlayAvailableResponse = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context);
+        if (googlePlayAvailableResponse != ConnectionResult.SUCCESS) {
+            GoogleApiAvailability.getInstance().getErrorDialog(this, googlePlayAvailableResponse, 0).show();
         }
     }
 
-    private boolean areLocationServicesAvailable(Context context){
-     return Util.isGPSLocationEnabled(context)
-             || Util.isNetworkLocationEnabled(context);
- }
+    private void testLocationIsCurrent() {
+
+        if (askLocationPermission()) {
+            if (DEBUG) {
+                Log.i(this.getClass().getName(), "checkFusedLocationService()"
+                        + (Util.requestingLocationUpdates(getApplicationContext()) ? " are already requesting" : " not requesting"));
+            }
+        }
+    }
+
+    private boolean areLocationServicesAvailable(Context context) {
+        return Util.isGPSLocationEnabled(context)
+                || Util.isNetworkLocationEnabled(context);
+    }
     private int setLocationStatus() {
         int locationStatus;
         if (mLocationHelper.getMyLocation() == null) {
             // somehow LocationHelper doesn't have a Location; testing this prevents nullPointerException for other tests
             locationStatus = testSharedPrefsLocationIsCurrent();
-            mLocationHelper.setMyLocation(Util.getLocFromSharedPrefs(getSharedPreferences(PREFS_NAME, 0)));
         } else if (Util.locationIsDefault(mLocationHelper.getMyLocation())) {
             locationStatus = GridSatView.LOCATION_STATUS_NONE;
         } else if (System.currentTimeMillis() - mLocationHelper.getMyLocation().getTime() > TWENTY_FOUR_HOURS) {
@@ -1130,43 +1204,6 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                     + " time - " + new Date(mLocationHelper.getMyLocation().getTime()));
         }
         return locationStatus;
-    }
-
-    /* Creates a dialog for an error message */
-    private void showErrorDialog(int errorCode) {
-        // Create a fragment for the error dialog
-        ErrorDialogFragment dialogFragment = new ErrorDialogFragment();
-        // Pass the error that should be displayed
-        Bundle args = new Bundle();
-        args.putInt(DIALOG_ERROR, errorCode);
-        dialogFragment.setArguments(args);
-        dialogFragment.show(getSupportFragmentManager(), "errordialog");
-    }
-
-    /* Called from ErrorDialogFragment when the dialog is dismissed. */
-    private void onDialogDismissed() {
-        mLocationHelper.mResolvingError = false;
-        mLocationHelper.connectionFailureResult = null;
-    }
-
-    /* A fragment to display an error dialog */
-    public static class ErrorDialogFragment extends DialogFragment {
-        public ErrorDialogFragment() { }
-
-        @NonNull
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            // Get the error code and retrieve the appropriate dialog
-            int errorCode = this.getArguments().getInt(DIALOG_ERROR);
-            return GoogleApiAvailability.getInstance().getErrorDialog(
-                    this.getActivity(), errorCode, REQUEST_RESOLVE_ERROR);
-        }
-
-        @Override
-        public void onDismiss(DialogInterface dialog) {
-            if (DEBUG){Log.i(this.getClass().getName(), "onDismiss()");}
-            ((MainActivity) getActivity()).onDialogDismissed();
-        }
     }
 
     /**
@@ -1359,8 +1396,8 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         // dismiss any snackbars showing when touchEvent occurs
         if (mWirelessSettingsSnackbar != null && mWirelessSettingsSnackbar.isShown()){
             mWirelessSettingsSnackbar.dismiss();
-        } else if (mPermissionSnackbar != null && mPermissionSnackbar.isShown()){
-            mPermissionSnackbar.dismiss();
+        } else if (mMobileDataPermissionSnackbar != null && mMobileDataPermissionSnackbar.isShown()){
+            mMobileDataPermissionSnackbar.dismiss();
         } else  if (mLocationSettingsSnackBar != null && mLocationSettingsSnackBar.isShown()){
             mLocationSettingsSnackBar.dismiss();
         } else  if (mCameraPermissionSnackBar != null && mCameraPermissionSnackBar.isShown()){
@@ -1620,7 +1657,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                  if (mGridSatView.isLiveMode()) {
                     lowPassFilterMag(event.values.clone());
                          // correct for declination
-                     mGridSatView.setLosAzDeg(calcAz() - mLocationHelper.magDeclination);
+                     mGridSatView.setLosAzDeg(calcAz() - mLocationHelper.getMagDeclination());
                 }
                 break;
             case Sensor.TYPE_ACCELEROMETER:
@@ -1721,6 +1758,10 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 }).show();
     }
     private void initializeSnackBars() {
+        mMobileDataPermissionSnackbar = Snackbar.make(
+                mGridSatView,
+                getString(R.string.ask_mobile_internet_permission),
+                Snackbar.LENGTH_INDEFINITE);
         mCameraPermissionSnackBar = Snackbar.make(
                 mGridSatView,
                 getString(R.string.allow_camera),
@@ -1736,6 +1777,12 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         mHintSnackBar = Snackbar.make(
                 mGridSatView, getString(R.string.livemode_hint),
                 Snackbar.LENGTH_INDEFINITE);
+        snackBarList.clear();
+        snackBarList.add(mMobileDataPermissionSnackbar);
+        snackBarList.add(mWirelessSettingsSnackbar);
+        snackBarList.add(mHintSnackBar);
+        snackBarList.add(mLocationSettingsSnackBar);
+        snackBarList.add(mCameraPermissionSnackBar);
     }
 
 }

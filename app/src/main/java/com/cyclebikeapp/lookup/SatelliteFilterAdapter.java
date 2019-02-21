@@ -1,5 +1,6 @@
-package com.cyclebikeapp.upinthesky;
+package com.cyclebikeapp.lookup;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
@@ -14,8 +15,8 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import static com.cyclebikeapp.upinthesky.Constants.KEY_SATELLITE_CATEGORY;
-import static com.cyclebikeapp.upinthesky.Constants.KEY_THUMB;
+import static com.cyclebikeapp.lookup.Constants.KEY_SATELLITE_CATEGORY;
+import static com.cyclebikeapp.lookup.Constants.KEY_THUMB;
 /*
  * Copyright 2013 cyclebikeapp. All Rights Reserved.
  * Displays a list of satellite categories that the user can select a check box to allow display
@@ -25,7 +26,7 @@ class SatelliteFilterAdapter extends BaseAdapter {
 	private ArrayList<HashMap<String, String>> data;
 	private static LayoutInflater inflater = null;
 
-	public SatelliteFilterAdapter(Activity a, ArrayList<HashMap<String, String>> d) {
+	SatelliteFilterAdapter(Activity a, ArrayList<HashMap<String, String>> d) {
 		data = d;
 		inflater = (LayoutInflater) a
 				.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -43,6 +44,7 @@ class SatelliteFilterAdapter extends BaseAdapter {
 		return position;
 	}
 
+    @SuppressLint("InflateParams")
     public View getView(int position, View convertView, ViewGroup parent) {
         View vi = convertView;
         if (convertView == null) {
